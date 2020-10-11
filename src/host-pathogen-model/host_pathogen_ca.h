@@ -2,7 +2,8 @@
 #define HOST_PATHOGEN_H
 #include "cellular_automata.h"
 
-class HostPathogen: public CellularAutomaton
+template<typename T>
+class HostPathogen: public CellularAutomaton<T>
 {
 
 public:

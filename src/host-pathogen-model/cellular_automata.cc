@@ -2,16 +2,13 @@
 #include <vector>
 #include "cellular_automata.h"
 
-template <typename T>
-class Cell {
-    T _data;
-};
-
-
-CellularAutomaton::CellularAutomaton(int rows, int cols): _rows(rows), _cols(cols) {
+template<typename T>
+CellularAutomaton<T>::CellularAutomaton(int rows, int cols): _rows(rows), _cols(cols) {
     _grid.assign(_rows * _cols, 0);
 }
-void CellularAutomaton::display() {
+
+template<typename T>
+void CellularAutomaton<T>::display() {
     for(int i = 0; i < _rows; i++) {
         for (int j = 0; j < _cols; j++) {
             std::cout << _grid[(i * _cols)  + j] << " ";
@@ -19,11 +16,14 @@ void CellularAutomaton::display() {
         std::cout << "\n";
     }
 }
-void CellularAutomaton::update() {
+
+template<typename T>
+void CellularAutomaton<T>::update() {
 
 }
 
-void CellularAutomaton::simulate(int steps) {
+template<typename T>
+void CellularAutomaton<T>::simulate(int steps) {
     for (int i = 0; i < steps; i++) {
         this->update();
     }

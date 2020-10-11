@@ -2,6 +2,7 @@
 #define CELULLAR_AUTOMATON_H
 #include <vector>
 
+template<typename T = int>
 class CellularAutomaton {
  public:
     CellularAutomaton(int rows, int cols);
@@ -9,9 +10,11 @@ class CellularAutomaton {
     virtual void update();
     void simulate(int steps);
  protected:
-    std::vector<int> _grid;
+    std::vector<T> _grid;
     int _rows;
     int _cols;
 };
+
+template class CellularAutomaton<int>;
 
 #endif
