@@ -35,4 +35,6 @@ private:
 
 };
 
+template class HostPathogen<HostPathogenCell>;
+
 #endif
