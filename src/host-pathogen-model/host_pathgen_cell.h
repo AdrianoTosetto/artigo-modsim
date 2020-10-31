@@ -20,14 +20,21 @@ class HostPathogenCell {
     void setIsAlive(bool value);
     bool isAlive() const;
 
+
     friend bool operator==(const HostPathogenCell& lhs, const HostPathogenCell& rhs);
     friend std::ostream& operator<<(std::ostream& os, const HostPathogenCell& cell);
     HostPathogenCell& operator=(const HostPathogenCell& rhs);
 
+    void setInfectedByA();
+    void setInfectedByB();
+
+    bool infectedByA() const;
+    bool infectedByB() const;
+
  private:
-    bool _isAlive = false;
     PathogenStatus _pathogenAStatus = PathogenStatus::NONE;
     PathogenStatus _pathogenBStatus = PathogenStatus::NONE;
+    bool _isAlive = false;
     uint8_t _weeksAlive = 0;
 };
 

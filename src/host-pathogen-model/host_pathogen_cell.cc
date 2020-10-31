@@ -24,6 +24,14 @@ HostPathogenCell::HostPathogenCell(
 }
 
 
+void HostPathogenCell::setInfectedByA() {
+    _pathogenAStatus = PathogenStatus::INFECTED;
+}
+void HostPathogenCell::setInfectedByB() {
+    _pathogenBStatus = PathogenStatus::INFECTED;
+}
+
+
 void HostPathogenCell::setIsAlive(bool value) {
     _isAlive = value;
     if (value) {
@@ -37,6 +45,14 @@ void HostPathogenCell::setIsAlive(bool value) {
 
 bool HostPathogenCell::isAlive() const {
     return _isAlive;
+}
+
+bool HostPathogenCell::infectedByA() const {
+    return _pathogenAStatus == PathogenStatus::INFECTED;
+}
+
+bool HostPathogenCell::infectedByB() const {
+    return _pathogenBStatus == PathogenStatus::INFECTED;
 }
 
 bool operator==(const HostPathogenCell& lhs, const HostPathogenCell& rhs) {
