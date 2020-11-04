@@ -4,13 +4,13 @@
 #include <vector>
 #include "cellular_automata.h"
 
-template<typename T = HostPathogenCell>
-class HostPathogen: public CellularAutomaton<T>
+class HostPathogen: public CellularAutomaton<HostPathogenCell>
 {
 
 public:
     HostPathogen(int rows, int cols);
     ~HostPathogen();
+    void setInitialConditions(uint32_t, uint32_t, uint32_t);
     virtual void update();
     int aliveCells();
     void births();
@@ -21,17 +21,17 @@ public:
     std::vector<uint32_t>& get__timestamps() const;
     std::vector<uint32_t>& get__aliveCellsPerTimestamp() const;
 
-    std::pair<uint32_t, uint32_t> countInfectedsInNeighborhood(const std::vector<T> neighbors) const;
+    std::pair<uint32_t, uint32_t> countInfectedsInNeighborhood(const std::vector<HostPathogenCell> neighbors) const;
 
 private:
     const double deathProbability = 0.04 / 100; // 0.04% of dying
 
     void iterate();
 
-    bool born(T& cell);
-    bool death(T& cell);
+    bool born(HostPathogenCell& cell);
+    bool death(HostPathogenCell& cell);
 
-    void updatePathogensStatusInCell(T&cell);
+    void updatePathogensStatusInCell(HostPathogenCell& cell);
     void updatePathogensStatusInCell(uint32_t, uint32_t);
     /*
         for debug purposes and for data generation
@@ -46,7 +46,5 @@ private:
     */
 
 };
-
-template class HostPathogen<HostPathogenCell>;
 
 #endif

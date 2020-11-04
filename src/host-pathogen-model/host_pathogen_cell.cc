@@ -35,11 +35,14 @@ void HostPathogenCell::setInfectedByB() {
 void HostPathogenCell::setIsAlive(bool value) {
     _isAlive = value;
     if (value) {
+        color = "255,255,255";
         _pathogenAStatus = PathogenStatus::SUSCEPTIBLE;
         _pathogenBStatus = PathogenStatus::SUSCEPTIBLE;
     } else {
+        color = "0,0,0";
         _pathogenAStatus = NONE;
         _pathogenBStatus = NONE;
+        _weeksAlive = 0;
     }
 }
 
@@ -55,8 +58,27 @@ bool HostPathogenCell::infectedByB() const {
     return _pathogenBStatus == PathogenStatus::INFECTED;
 }
 
+void HostPathogenCell::setRGBColor(std::array<uint8_t, 3>&& codes) {
+    rgbColor = codes;
+}
+
 bool operator==(const HostPathogenCell& lhs, const HostPathogenCell& rhs) {
     return true;
+}
+
+std::string HostPathogenCell::getColorString() const {
+    const std::string red = std::to_string(rgbColor[0]);
+    const std::string green = std::to_string(rgbColor[1]);
+    const std::string blue = std::to_string(rgbColor[2]);
+
+    std::string ret = red + "," + green + "," + red;
+    if (_isAlive) {
+        if (infectedByA() || infectedByB())
+            return "255,0,0";
+            
+        return "255,255,255";
+    }
+    return "0,0,0";
 }
 
 HostPathogenCell& HostPathogenCell::operator=(const HostPathogenCell& rhs) {
@@ -72,11 +94,31 @@ HostPathogenCell& HostPathogenCell::operator=(const HostPathogenCell& rhs) {
 
 std::ostream& operator<<(std::ostream& os, const HostPathogenCell& cell) {
 
+    if (cell._isAlive) {
+        std::string code;
+
+        if (cell.infectedByA() && cell.infectedByB())
+            code = "m";
+        if (cell.infectedByA() && !cell.infectedByB())
+            code = "a";
+        if (cell.infectedByB() && !cell.infectedByA())
+            code = "b";
+        if (!cell.infectedByA() && !cell.infectedByB())
+            code = "h";
+        os << code;
+    } else {
+        os << "d";
+    }
+
+    return os;
+}
+
+std::fstream& operator>>(std::fstream& os, const HostPathogenCell& cell) {
+
     if (!cell._isAlive)
-        os << " 0 ";
+        os >> "[255;255;255]";
     else {
-        os << " 1 ";
-        // os << "A-" << cell._pathogenAStatus << "|B-" << cell._pathogenBStatus;
+        os >> "[0;0;0]";
     }
 
     return os;

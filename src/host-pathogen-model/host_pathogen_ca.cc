@@ -5,60 +5,41 @@
 #include <ctime>
 #include <random>
 #include <array>
+#include <algorithm>
 
 #include "host_pathogen_ca.h"
 #include "host_pathgen_cell.h"
 #include "random.h"
 #include "matplotlibcpp.h"
 
-template<typename T>
-HostPathogen<T>::HostPathogen(int rows, int cols): CellularAutomaton<T>(rows, cols) {
-    this->_grid.assign(rows*cols, HostPathogenCell());
-    for (auto i = 0; i < 32; i++);
-        //this->_grid[i].setIsAlive(true);
-    /*this->_grid[0].setIsAlive(true);
-    this->_grid[2].setIsAlive(true);
-    this->_grid[4].setIsAlive(true);
-    this->_grid[2].setIsAlive(true);
-    this->_grid[9].setIsAlive(true);
-    this->_grid[3].setIsAlive(true);
-    this->_grid[50].setIsAlive(true);
-    this->_grid[89].setIsAlive(true);
-    this->_grid[100].setIsAlive(true);
-    this->_grid[105].setIsAlive(true);
-    this->_grid[109].setIsAlive(true);
-    this->_grid[117].setIsAlive(true);
-    this->_grid[120].setIsAlive(true);
-    this->_grid[123].setIsAlive(true);
-    this->_grid[200].setIsAlive(true);
-    this->_grid[210].setIsAlive(true);*/
+
+HostPathogen::HostPathogen(int rows, int cols): 
+    CellularAutomaton<HostPathogenCell>(rows, cols) {
+    //this->_grid.assign(rows*cols, HostPathogenCell());
 }
 
-template<typename T>
-HostPathogen<T>::~HostPathogen() {}
 
-template<typename T>
-int HostPathogen<T>::aliveCells() {
+HostPathogen::~HostPathogen() {}
+
+
+int HostPathogen::aliveCells() {
     int aliveCells = 0;
-    for (auto cell : this->_grid)
+    for (auto cell : this->grid.rawGridRef())
         if (cell.isAlive())
             aliveCells++;
 
     return aliveCells;
 }
 
-template<typename T>
-std::vector<uint32_t>& HostPathogen<T>::get__timestamps() const {
+std::vector<uint32_t>& HostPathogen::get__timestamps() const {
     return this->__timestamps;
 }
 
-template<typename T>
-std::vector<uint32_t>& HostPathogen<T>::get__aliveCellsPerTimestamp() const {
+std::vector<uint32_t>& HostPathogen::get__aliveCellsPerTimestamp() const {
     return this->__aliveCellsPerTimestamp;
 }
 
-template<typename T>
-bool HostPathogen<T>::death(T& cell) {
+bool HostPathogen::death(HostPathogenCell& cell) {
     double draw = randomProbability();
     if (draw <= deathProbability) {
         cell.setIsAlive(false);
@@ -67,8 +48,32 @@ bool HostPathogen<T>::death(T& cell) {
     return false;
 }
 
-template<typename T>
-bool HostPathogen<T>::born(T& cell) {
+void HostPathogen::setInitialConditions(uint32_t aliveHosts, uint32_t infectedByA, uint32_t infectedByB) {
+    uint32_t i = 0;
+    std::vector<uint32_t> indexes(_rows * _cols);
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+
+    std::generate(indexes.begin(), indexes.end(), [&] {return i++;});
+    std::shuffle(indexes.begin(), indexes.end(), std::default_random_engine(seed));
+
+    for (auto i = 0; i < aliveHosts; i++) {
+        auto randomIndex = indexes[i];
+        grid[randomIndex].setIsAlive(true);
+    }
+
+    for (auto i = 0; i < infectedByA; i++) {
+        auto randomIndex = indexes[i];
+        grid[randomIndex].setInfectedByA();
+    }
+
+    for (auto i = infectedByA; i < infectedByA + infectedByB; i++) {
+        auto randomIndex = indexes[i];
+        grid[randomIndex].setInfectedByB();
+    }
+        
+}
+
+bool HostPathogen::born(HostPathogenCell& cell) {
 
     uint32_t totalSites = this->_rows * this->_cols;
     uint32_t aliveIndividuals = this->__aliveCells;
@@ -90,45 +95,59 @@ bool HostPathogen<T>::born(T& cell) {
     return false;
 }
 
-template<typename T>
-void HostPathogen<T>::updatePathogensStatusInCell(T& cell) {
+void HostPathogen::updatePathogensStatusInCell(HostPathogenCell& cell) {
 
 }
 
-template<typename T>
-void HostPathogen<T>::updatePathogensStatusInCell(uint32_t row, uint32_t col) {
+void HostPathogen::updatePathogensStatusInCell(uint32_t row, uint32_t col) {
     
 }
 
-template<typename T>
-void HostPathogen<T>::iterate() {
-    std::vector<HostPathogenCell> nextGrid(this->_grid);
+void HostPathogen::iterate() {
+    Grid<HostPathogenCell> nextGrid(this->grid);
     this->__aliveCells = this->aliveCells();
     this->__aliveCellsPerTimestamp.push_back(this->__aliveCells);
 
     for (auto i = 0; i < this->_rows; i++) {
        for (auto j = 0; j < this->_cols; j++) {
-           auto& cell = nextGrid[(i*this->_cols) + j];
+           auto& cell = nextGrid.getCellRef(i, j);
 
-           if (this->getCellValue(i, j).isAlive()) {
+           if (grid.getCellRef(i, j).isAlive()) {
                // if cell did not die in the death stage so it can be infected
-                if (!death(cell)) {
-                    auto infectionProbability = calcInfectionProbability(i, j);
-                }
+                if (death(cell))
+                    continue;
+                auto infectionProbability = calcInfectionProbability(i, j);
+                double a = infectionProbability.first;
+                double b = infectionProbability.second;
 
+                double drawA = randomProbability();
+                double drawB = randomProbability();
+                //std::cout << "prob a " <<  a << std::endl;
+                //std::cout << "prob b " <<  b << std::endl;
+                if (drawA <= a) {
+                    cell.setInfectedByA();
+                }
+                if (drawB <= b) {
+                    cell.setInfectedByB();
+                }
            } else {
-                born(cell);
+                if (born(cell)) {
+                }
            }
        }
     }
-    std::cout << this->__aliveCellsPerTimestamp.size() << std::endl;
-    this->_grid = nextGrid;
+    //std::cout << this->__aliveCellsPerTimestamp.size() << std::endl;
+
+    //std::this_thread::sleep_for(std::chrono::seconds(1));
+    this->grid = nextGrid;
+    // std::cout << "=============================================" << std::endl;
+    // display();
+    // std::cout << "=============================================" << std::endl;
+
 }
 
-
-template<typename T>
-std::pair<uint32_t, uint32_t> HostPathogen<T>::countInfectedsInNeighborhood(
-    const std::vector<T> neighbors) const {
+std::pair<uint32_t, uint32_t> HostPathogen::countInfectedsInNeighborhood(
+    const std::vector<HostPathogenCell> neighbors) const {
 
     uint32_t counterA = 0;
     uint32_t counterB = 0;
@@ -147,8 +166,7 @@ std::pair<uint32_t, uint32_t> HostPathogen<T>::countInfectedsInNeighborhood(
     return ret;
 }
 
-template<typename T>
-std::pair<double, double> HostPathogen<T>::calcInfectionProbability(
+std::pair<double, double> HostPathogen::calcInfectionProbability(
     uint32_t row,  uint32_t col) const {
 
     std::pair<double, double> ret;
@@ -171,12 +189,6 @@ std::pair<double, double> HostPathogen<T>::calcInfectionProbability(
     auto c = countInfectedsInNeighborhood(radiusThreeNeigbors);
     auto d = countInfectedsInNeighborhood(radiusFoursNeigbors);
 
-
-    // std::cout << "a = " << a.first << std::endl;
-    // std::cout << "b = " << b.first << std::endl;
-    // std::cout << "c = " << c.first << std::endl;
-    // std::cout << "d = " << d.first << std::endl;
-
     auto term1A = std::pow((1-Wa), a.first);
     auto term2A = std::pow((1-Wb), b.first);
     auto term3A = std::pow((1-Wc), c.first);
@@ -196,52 +208,9 @@ std::pair<double, double> HostPathogen<T>::calcInfectionProbability(
     return ret;
 }
 
-
-template<typename T>
-void HostPathogen<T>::update() {
-    std::cout << "timestamp = " << this->_timestamp << std::endl;
+void HostPathogen::update() {
+    //std::cout << "timestamp = " << this->_timestamp << std::endl;
     this->__timestamps.push_back(this->_timestamp);
     this->iterate();
     this->_timestamp++;
 }
-// UNSED CODE ============================================================================== UNSED CODE
-// template<typename T>
-// void HostPathogen<T>::births() {
-//     uint32_t _rows = this->_rows;
-//     uint32_t _cols = this->_cols;
-//     uint32_t totalSites = _rows * _cols;
-//     uint32_t aliveIndividuals = aliveCells();
-//     uint32_t emptySites = totalSites - aliveIndividuals;
-   
-//     std::cout << "a = " << aliveIndividuals << " - " << emptySites << std::endl;
-    
-//     std::vector<HostPathogenCell> nextGrid(this->_grid);
-
-//     this->__aliveCellsPerTimestamp.push_back(this->aliveCells());
-
-//     for (auto i = 0; i < _rows; i++) {
-//         for (auto j = 0; j < _cols; j++) {
-//             if (!this->getCellValue(i, j).isAlive()) {
-
-//                 double controlFactor = static_cast<double>(aliveIndividuals) /
-//                      static_cast<double>(totalSites);
-//                 double newIndividuals = 0.005 * aliveIndividuals * (1 - controlFactor);  
-                
-//                 double prob = newIndividuals / emptySites;
-//                 double draw = randomProbability();
-
-//                 if (draw <= prob) {
-//                     nextGrid[(i*_cols) + j].setIsAlive(true);
-//                 }
-//             } else if (this->_grid[(i*_cols) + j].isAlive()) {
-//                 double draw = randomProbability();
-//                 if (draw <= 0.0004) {
-//                     //std::cout<< "new death" << std::endl;
-//                     nextGrid[(i*_cols) + j].setIsAlive(false);
-//                 }
-//             }
-//         }
-//     }
-//     this->_grid = nextGrid;
-// }
-//template class HostPathogen<HostPathogenCell>;

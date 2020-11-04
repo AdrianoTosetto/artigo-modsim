@@ -2,6 +2,8 @@
 #define HOST_PATHOGEN_CELL_H
 
 #include <iostream>
+#include <array>
+#include <initializer_list>
 
 class HostPathogenCell {
  public:
@@ -23,6 +25,7 @@ class HostPathogenCell {
 
     friend bool operator==(const HostPathogenCell& lhs, const HostPathogenCell& rhs);
     friend std::ostream& operator<<(std::ostream& os, const HostPathogenCell& cell);
+    friend std::fstream& operator>>(std::fstream& os, const HostPathogenCell& cell);
     HostPathogenCell& operator=(const HostPathogenCell& rhs);
 
     void setInfectedByA();
@@ -31,11 +34,16 @@ class HostPathogenCell {
     bool infectedByA() const;
     bool infectedByB() const;
 
+    void setRGBColor(std::array<uint8_t, 3>&& codes);
+
+    std::string getColorString() const;
+    std::string color = "0,0,0";
  private:
     PathogenStatus _pathogenAStatus = PathogenStatus::NONE;
     PathogenStatus _pathogenBStatus = PathogenStatus::NONE;
     bool _isAlive = false;
     uint8_t _weeksAlive = 0;
+    std::array<uint8_t, 3> rgbColor = {0, 0, 0};
 };
 
 #endif
