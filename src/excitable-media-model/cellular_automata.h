@@ -112,7 +112,7 @@ class CellularAutomaton {
     T _getNeighbor(uint32_t row, uint32_t col, NDIRECTION dir, uint32_t radius);
 
     // in which timestamps the class should generate a snapshot of the grid
-    std::vector<uint32_t> _imageBreakpoints;
+    std::vector<uint32_t> _imageBreakpoints{};
 
 };
 
@@ -391,11 +391,13 @@ template<typename T>
 void CellularAutomaton<T>::simulate(uint32_t steps) {
 
     for (auto i = 0; i < steps; i++) {
-        auto breakpoint = _imageBreakpoints.front();
-        if (i == breakpoint) {
-            const std::string filename = "snapshot" + std::to_string(breakpoint);
-            saveToImage(filename);
-            _imageBreakpoints.erase(_imageBreakpoints.begin());
+        if (!_imageBreakpoints.empty()) {
+            auto breakpoint = _imageBreakpoints.front();
+            if (i == breakpoint) {
+                const std::string filename = "snapshot" + std::to_string(breakpoint);
+                saveToImage(filename);
+                _imageBreakpoints.erase(_imageBreakpoints.begin());
+            }
         }
         this->update();
     }

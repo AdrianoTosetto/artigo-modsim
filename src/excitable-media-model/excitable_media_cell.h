@@ -4,20 +4,20 @@
 #include <iostream>
 #include <random>
 
-double_t uniformDistribution(double low, double high) {
+double uniformDistribution(double low, double high) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    static std::uniform_real_distribution<> distr(low, high);
+    std::uniform_real_distribution<> distr(low, high);
 
     return distr(gen);
 }
 
-
-
+template<std::size_t E = 12, std::size_t R = 13>
 class ExcitableMediaCell {
  public:
     ExcitableMediaCell();
     ExcitableMediaCell(uint32_t, uint32_t);
+    ExcitableMediaCell(uint32_t, uint32_t, uint32_t);
     double distance(const ExcitableMediaCell& other);
 
     double xPerturbation() const;
@@ -29,17 +29,40 @@ class ExcitableMediaCell {
     double realPositionX() const;
     double realPositionY() const;
 
+    uint32_t state() const;
+    double weight() const;
+    bool excited() const;
+    bool refractory() const;
+    bool nonExcited() const;
+
     std::string getColorString() const {
-        return _colorString;
+        if (excited())
+            return "255,255,255";
+        if (refractory())
+            return "100,100,100";
+        return "000,000,000";
     }
     void update(double sum) {
-        if (_state < E + R) {
-            _state++;
-        } else {
-            
+        //std::cout << sum << std::endl;
+        if (_state == 0) {
+            if (sum > 0.35) {
+                //std::cout << "aqui" << std::endl;
+                _state = 1;
+            }
+            return;
         }
+        if (_state <= (E + R)) {
+            _state++;
+            return;
+        }
+        if (_state > (E + R))
+            _state = 0;
     }
-    friend std::ostream& operator<<(std::ostream& os, const ExcitableMediaCell& cell);
+    friend inline std::ostream& operator<<(std::ostream& os, const ExcitableMediaCell<E, R>& cell) {
+        //os << cell._row << ";" << cell._col;
+        os << cell.state();
+        return os;
+    }
  private:
     double _xPerturbation;
     double _yPerturbation;
@@ -49,57 +72,94 @@ class ExcitableMediaCell {
 
     uint8_t _state{0};
 
-    uint32_t E = 5;
-    uint32_t R = 8; 
     std::string _colorString = "0,0,0";
 };
 
-
-ExcitableMediaCell::ExcitableMediaCell(uint32_t row, uint32_t col): 
+template<std::size_t E, std::size_t R>
+ExcitableMediaCell<E, R>::ExcitableMediaCell(uint32_t row, uint32_t col): 
     _row(row), _col(col) {
     _xPerturbation = uniformDistribution(-0.5, 0.5);
     _yPerturbation = uniformDistribution(-0.5, 0.5);
     _weight = uniformDistribution(0.5, 1.5);
 }
 
-ExcitableMediaCell::ExcitableMediaCell(): _row(0), _col(0) {
+template<std::size_t E, std::size_t R>
+ExcitableMediaCell<E, R>::ExcitableMediaCell(uint32_t state, uint32_t row, uint32_t col): 
+    _row{row}, _col{col}, _state{state} {
+    _xPerturbation = uniformDistribution(-0.5, 0.5);
+    _yPerturbation = uniformDistribution(-0.5, 0.5);
+    _weight = uniformDistribution(0.5, 1.5);
+}
+
+template<std::size_t E, std::size_t R>
+ExcitableMediaCell<E, R>::ExcitableMediaCell(): _row(0), _col(0) {
 
     _xPerturbation = uniformDistribution(-0.5, 0.5);
     _yPerturbation = uniformDistribution(-0.5, 0.5);
     _weight = uniformDistribution(0.5, 1.5);
 }
 
-uint32_t ExcitableMediaCell::row() const {
+template<std::size_t E, std::size_t R>
+uint32_t ExcitableMediaCell<E, R>::row() const {
     return _row;
 }
-uint32_t ExcitableMediaCell::col() const {
+
+template<std::size_t E, std::size_t R>
+uint32_t ExcitableMediaCell<E, R>::col() const {
     return _col;
 }
 
-double ExcitableMediaCell::xPerturbation() const {
-    return _xPerturbation;
-}
-double ExcitableMediaCell::yPerturbation() const {
+template<std::size_t E, std::size_t R>
+double ExcitableMediaCell<E, R>::xPerturbation() const {
     return _xPerturbation;
 }
 
-double ExcitableMediaCell::realPositionX() const {
+template<std::size_t E, std::size_t R>
+double ExcitableMediaCell<E, R>::yPerturbation() const {
+    return _xPerturbation;
+}
+
+template<std::size_t E, std::size_t R>
+double ExcitableMediaCell<E, R>::realPositionX() const {
     return static_cast<double>(_row) + _xPerturbation;
 }
 
-double ExcitableMediaCell::realPositionY() const {
+template<std::size_t E, std::size_t R>
+double ExcitableMediaCell<E, R>::realPositionY() const {
     return static_cast<double>(_col) + _yPerturbation;
 }
 
-double ExcitableMediaCell::distance(const ExcitableMediaCell& other) {
+template<std::size_t E, std::size_t R>
+double ExcitableMediaCell<E, R>::distance(const ExcitableMediaCell& other) {
     return (
         std::abs(this->realPositionX() - other.realPositionX()) +
         std::abs(this->realPositionY() - other.realPositionY())
     );
 }
 
-std::ostream& operator<<(std::ostream& os, const ExcitableMediaCell& cell) {
-    os << cell._row << ";" << cell._col;
+template<std::size_t E, std::size_t R>
+uint32_t ExcitableMediaCell<E, R>::state() const {
+    return _state;
+}
+
+template<std::size_t E, std::size_t R>
+double ExcitableMediaCell<E, R>::weight() const {
+    return _weight;
+}
+
+template<std::size_t E, std::size_t R>
+bool ExcitableMediaCell<E, R>::excited() const {
+    return _state > 0 && _state <= E;
+}
+
+template<std::size_t E, std::size_t R>
+bool ExcitableMediaCell<E, R>::refractory() const {
+    return _state > E && _state <= E + R;
+}
+
+template<std::size_t E, std::size_t R>
+bool ExcitableMediaCell<E, R>::nonExcited() const {
+    return _state == 0;
 }
 
 #endif
