@@ -57,6 +57,7 @@ class Grid {
     std::vector<T> _rawGrid;
     uint32_t _rows;
     uint32_t _cols;
+
 };
 
 
@@ -95,12 +96,14 @@ class CellularAutomaton {
  
     void saveToImage(const std::string& filename) const;
     void setBreakpoints(const std::initializer_list<uint32_t>&);
+    void setSnapshotsFolder(const std::string& folder);
  protected:
     std::vector<T> _grid;
     Grid<T> grid;
     int _rows;
     int _cols;
     uint32_t _timestamp = 0;
+    std::string _snapshotsFolder;
  private:
     inline std::vector<T> _getMooreNeighborhoodEntirePath(uint32_t row,  
         uint32_t col, uint32_t radius) const;
@@ -113,6 +116,7 @@ class CellularAutomaton {
 
     // in which timestamps the class should generate a snapshot of the grid
     std::vector<uint32_t> _imageBreakpoints{};
+
 
 };
 
@@ -388,13 +392,18 @@ std::vector<T> CellularAutomaton<T>::path(uint32_t row, uint32_t col,
 }
 
 template<typename T>
+void CellularAutomaton<T>::setSnapshotsFolder(const std::string& folder) {
+    _snapshotsFolder = folder;
+}
+
+template<typename T>
 void CellularAutomaton<T>::simulate(uint32_t steps) {
 
     for (auto i = 0; i < steps; i++) {
         if (!_imageBreakpoints.empty()) {
             auto breakpoint = _imageBreakpoints.front();
             if (i == breakpoint) {
-                const std::string filename = "snapshot" + std::to_string(breakpoint);
+                const std::string filename = _snapshotsFolder + "snapshot" + std::to_string(breakpoint);
                 saveToImage(filename);
                 _imageBreakpoints.erase(_imageBreakpoints.begin());
             }

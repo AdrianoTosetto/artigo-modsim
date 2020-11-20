@@ -3,22 +3,36 @@
 
 int main(int argc, char const *argv[])
 {
-    ExcitableMediaModel model(100, 150);
-    model.display();
-    std::cout << "x 2,2: " << model.getCellRef(2, 2).realPositionX() << std::endl;
-    std::cout << "y 2,2: " << model.getCellRef(2, 2).realPositionY() << std::endl;
 
-    std::cout << "x 3,3: " << model.getCellRef(3, 3).realPositionX() << std::endl;
-    std::cout << "y 3,3: " << model.getCellRef(3, 3).realPositionY() << std::endl;
+    ExcitableMediaModel modelR1(100, 150, 1.3);
+    modelR1.setSnapshotsFolder("r_1.3/");
+    modelR1.setBreakpoints({0, 25, 50, 100, 200, 500, 999});
+    modelR1.simulate(1000);
+    modelR1.saveEverBeenActive("hasEverBeenActive");
 
-    std::cout << "d = " << model.getCellRef(2, 2).distance(model.getCellRef(3, 3)) << std::endl;
-    std::cout << "d = " << model.getCellRef(3, 3).distance(model.getCellRef(2, 2)) << std::endl;
-    model.setBreakpoints({0, 25, 50, 100, 200, 500, 999});
-    model.simulate(1000);
-    //std::cout << model.getCellValue(4,1).state() << std::endl;
-    // ExcitableMediaCell<12, 13> cell(9090, 0, 0);
-    // std::cout << cell.weight() << std::endl;
-    // std::cout << uniformDistribution1(-0.5, 1.5) << std::endl;
-    // std::cout << uniformDistribution1(0.5, 1.5) << std::endl;
+    ExcitableMediaModel modelR2(100, 150, 1.4);
+    modelR2.setSnapshotsFolder("r_1.4/");
+    modelR2.setBreakpoints({0, 25, 50, 100, 200, 500, 999});
+    modelR2.simulate(1000);
+    modelR2.saveEverBeenActive("hasEverBeenActive");
+
+    ExcitableMediaModel modelR3(100, 150, 1.5);
+    modelR3.setSnapshotsFolder("r_1.5/");
+    modelR3.setBreakpoints({0, 25, 50, 100, 200, 500, 999});
+    modelR3.simulate(1000);
+    modelR3.saveEverBeenActive("hasEverBeenActive");
+
+    ExcitableMediaModel modelR4(100, 150, 1.6);
+    modelR4.setSnapshotsFolder("r_1.6/");
+    modelR4.setBreakpoints({0, 25, 50, 100, 200, 500, 999});
+    modelR4.simulate(1000);
+    modelR4.saveEverBeenActive("hasEverBeenActive");
+
+    ExcitableMediaModel modelR5(100, 150, 1.8);
+    modelR5.setSnapshotsFolder("r_1.8/");
+    modelR5.setBreakpoints({0, 25, 50, 100, 200, 500, 999});
+    modelR5.simulate(1000);
+    modelR5.saveEverBeenActive("hasEverBeenActive");
+
     return 0;
 }

@@ -48,6 +48,7 @@ class ExcitableMediaCell {
             if (sum > 0.35) {
                 //std::cout << "aqui" << std::endl;
                 _state = 1;
+                _hasEverBeenActive = true;
             }
             return;
         }
@@ -58,6 +59,10 @@ class ExcitableMediaCell {
         if (_state > (E + R))
             _state = 0;
     }
+
+    bool hasEverBeenActive() {
+        return _hasEverBeenActive;
+    }
     friend inline std::ostream& operator<<(std::ostream& os, const ExcitableMediaCell<E, R>& cell) {
         //os << cell._row << ";" << cell._col;
         os << cell.state();
@@ -67,12 +72,15 @@ class ExcitableMediaCell {
     double _xPerturbation;
     double _yPerturbation;
     double _weight;
+
     uint32_t _row;
     uint32_t _col;
 
     uint8_t _state{0};
 
     std::string _colorString = "0,0,0";
+
+    bool _hasEverBeenActive;
 };
 
 template<std::size_t E, std::size_t R>
@@ -81,6 +89,7 @@ ExcitableMediaCell<E, R>::ExcitableMediaCell(uint32_t row, uint32_t col):
     _xPerturbation = uniformDistribution(-0.5, 0.5);
     _yPerturbation = uniformDistribution(-0.5, 0.5);
     _weight = uniformDistribution(0.5, 1.5);
+    _hasEverBeenActive = false;
 }
 
 template<std::size_t E, std::size_t R>
@@ -89,6 +98,8 @@ ExcitableMediaCell<E, R>::ExcitableMediaCell(uint32_t state, uint32_t row, uint3
     _xPerturbation = uniformDistribution(-0.5, 0.5);
     _yPerturbation = uniformDistribution(-0.5, 0.5);
     _weight = uniformDistribution(0.5, 1.5);
+    if (_state > 0)
+        _hasEverBeenActive = true;
 }
 
 template<std::size_t E, std::size_t R>
@@ -97,6 +108,7 @@ ExcitableMediaCell<E, R>::ExcitableMediaCell(): _row(0), _col(0) {
     _xPerturbation = uniformDistribution(-0.5, 0.5);
     _yPerturbation = uniformDistribution(-0.5, 0.5);
     _weight = uniformDistribution(0.5, 1.5);
+    _hasEverBeenActive = false;
 }
 
 template<std::size_t E, std::size_t R>
