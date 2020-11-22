@@ -45,10 +45,10 @@ class ExcitableMediaModel: public CellularAutomaton<ExcitableMediaCell<>> {
         std::vector<ExcitableMediaCell<>> ret;
 
         uint32_t iradius = static_cast<int>(ceil(_radius)) + 1;
-        auto neighbors = getMooreNeighborhood(row, col, iradius, true);
+        auto neighbors = moore(row, col, iradius);
         auto cell = getCellValue(row, col);
         for (const auto& n: neighbors)
-            if (cell.distance(n) < _radius) {
+            if (cell.distance(n) <= _radius) {
                 ret.push_back(n);
             }
 
@@ -67,7 +67,6 @@ class ExcitableMediaModel: public CellularAutomaton<ExcitableMediaCell<>> {
     inline double nonExcitedCellsSum(const std::vector<ExcitableMediaCell<12, 13>>& neighbors) {
         auto sum = 0.0;
         for (auto& neighbor: neighbors) {
-            //std::cout << "w = " << neighbor.weight() << std::endl;
             if (neighbor.nonExcited() || neighbor.refractory())
                 sum += neighbor.weight();
         }
@@ -125,7 +124,7 @@ class ExcitableMediaModel: public CellularAutomaton<ExcitableMediaCell<>> {
 
     // cells that were, at least once, excited vs cells that have never been excited
     // 0 = cell has never been excited
-    // 1 = cell has been excited at leats once in the whole simulation
+    // 1 = cell has been excited at least once during the simulation
     
     Grid<int> _everBeenGray;
 };

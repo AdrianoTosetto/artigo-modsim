@@ -30,23 +30,16 @@ class ExcitableMediaCell {
     double realPositionY() const;
 
     uint32_t state() const;
+    void setState() { _state = 1;}
     double weight() const;
     bool excited() const;
     bool refractory() const;
     bool nonExcited() const;
 
-    std::string getColorString() const {
-        if (excited())
-            return "255,255,255";
-        if (refractory())
-            return "100,100,100";
-        return "000,000,000";
-    }
     void update(double sum) {
         //std::cout << sum << std::endl;
         if (_state == 0) {
             if (sum > 0.35) {
-                //std::cout << "aqui" << std::endl;
                 _state = 1;
                 _hasEverBeenActive = true;
             }
@@ -63,6 +56,18 @@ class ExcitableMediaCell {
     bool hasEverBeenActive() {
         return _hasEverBeenActive;
     }
+    void setVirtualPosition(int32_t row, int32_t col) {
+        _rowV = row;
+        _colV = col;
+    }
+    std::string getColorString() const {
+        if (excited())
+            return "255,255,255";
+        if (refractory())
+            return "100,100,100";
+        return "000,000,000";
+    }
+
     friend inline std::ostream& operator<<(std::ostream& os, const ExcitableMediaCell<E, R>& cell) {
         //os << cell._row << ";" << cell._col;
         os << cell.state();
@@ -72,6 +77,9 @@ class ExcitableMediaCell {
     double _xPerturbation;
     double _yPerturbation;
     double _weight;
+
+    int32_t _rowV;
+    int32_t _colV;
 
     uint32_t _row;
     uint32_t _col;

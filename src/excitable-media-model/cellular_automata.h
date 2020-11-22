@@ -8,6 +8,30 @@
 //#include "host_pathgen_cell.h"
 #include "excitable_media_cell.h"
 
+std::vector<std::pair<int, int>> genOffsets(int radius) {
+    std::vector<std::pair<int, int>> offsets;
+    for (auto r = -radius; r <= radius; r++)
+        offsets.push_back(std::make_pair(-radius, r));
+
+    for (auto r = -(radius-1); r <= (radius-1); r++)
+        offsets.push_back(std::make_pair(r, radius));
+
+    for (auto r = radius; r >= -radius; r--)
+        offsets.push_back(std::make_pair(radius, r));
+
+    for (auto r = (radius-1); r >= -(radius-1); r--)
+        offsets.push_back(std::make_pair(r, -radius));
+
+    return offsets;
+}
+
+int mod(int a, int b)
+{
+    int r = a % b;
+    return r < 0 ? r + b : r;
+}
+
+
 template<typename T>
 class Grid {
  public:
@@ -97,6 +121,8 @@ class CellularAutomaton {
     void saveToImage(const std::string& filename) const;
     void setBreakpoints(const std::initializer_list<uint32_t>&);
     void setSnapshotsFolder(const std::string& folder);
+    std::vector<T> moore(uint32_t row, uint32_t col, uint32_t radius) const;
+
  protected:
     std::vector<T> _grid;
     Grid<T> grid;
@@ -256,139 +282,27 @@ std::vector<T> CellularAutomaton<T>::getNeighbors(uint32_t row,
     return neighbors;
 }
 
-template<typename T>
-inline std::vector<T> CellularAutomaton<T>::_getMooreNeighborhoodEntirePath(uint32_t row, 
+template<typename T> 
+std::vector<T> CellularAutomaton<T>::moore(uint32_t row, 
     uint32_t col, uint32_t radius) const {
-        const uint32_t neighborsCount = (radius + 2) * (radius + 3) * (2*(radius+2) + 1) / 6;
 
-    std::vector<T> neighbors;
-    neighbors.reserve(neighborsCount);
+    std::vector<T> ret;
     for (auto r = 1; r <= radius; r++) {
+        for (auto& offset: genOffsets(r)) {
+            auto nRow = mod(row + offset.first, _rows);
+            auto nCol = mod(col + offset.second, _cols);
 
-        // start scanning the top, then go right, bottom, left and finally top again
-        // to complete the square
-        auto topCellPos = _getNeighboorPosition(row, col, NDIRECTION::TOP, r);
-        auto topCellRow = topCellPos.first;
-        auto topCellCol = topCellPos.second;
+            auto nRowV = row + offset.first;
+            auto nColV = col + offset.second;
 
-        Direction right1(NDIRECTION::RIGHT, r);
-        Direction bottom(NDIRECTION::BOTTOM, r*2);
-        Direction left(NDIRECTION::LEFT, r*2);
-        Direction top(NDIRECTION::TOP, r*2);
-        Direction right2(NDIRECTION::RIGHT, r - 1);
+            auto nCell = getCellValue(nRow, nCol);
+            nCell.setVirtualPosition(nRowV, nColV);
 
-        DirectionsList directionsList{right1, bottom, left, top };
-        if (r > 1)
-            directionsList.push_back(right2);
-
-        // moore neighborhood with radius r
-        auto rNeighborhood = path(topCellRow, topCellCol, directionsList);
-
-        neighbors.insert (
-            std::end(neighbors),
-            std::begin(rNeighborhood),
-            std::end(rNeighborhood)
-        );
-    }
-    return neighbors;
-}
-
-template<typename T>
-inline std::vector<T> CellularAutomaton<T>::_getMooreNeighborhood(uint32_t row, 
-    uint32_t col, uint32_t radius) const {
-
-    const uint32_t neighborsCount = (radius + 2) * (radius + 3) * (2*(radius+2) + 1) / 6;
-
-    // approximation of how many cells will be stored in the vector
-    // TODO: redo the formula to match exactly the numbers of elements needed
-    std::vector<T> neighbors;
-    neighbors.reserve(neighborsCount);
-
-    // start scanning the top, then go right, bottom, left and finally top again
-    // to complete the square
-    auto topCellPos = _getNeighboorPosition(row, col, NDIRECTION::TOP, radius);
-    auto topCellRow = topCellPos.first;
-    auto topCellCol = topCellPos.second;
-
-    Direction right1(NDIRECTION::RIGHT, radius);
-    Direction bottom(NDIRECTION::BOTTOM, radius*2);
-    Direction left(NDIRECTION::LEFT, radius*2);
-    Direction top(NDIRECTION::TOP, radius*2);
-    Direction right2(NDIRECTION::RIGHT, radius - 1);
-
-    DirectionsList directionsList {right1, bottom, left, top };
-    if (radius > 1)
-        directionsList.push_back(right2);
-
-    // moore neighborhood with radius r
-    auto rNeighborhood = path(topCellRow, topCellCol, directionsList);
-
-    neighbors.insert (
-        std::end(neighbors),
-        std::begin(rNeighborhood),
-        std::end(rNeighborhood)
-    );
-
-    return neighbors;
-}
-
-/*
-    returns a vector of cells that belong to the neighborhood of 
-    (row, col) cell.
-*/
-
-template<typename T>
-std::vector<T> CellularAutomaton<T>::getMooreNeighborhood(uint32_t row, 
-    uint32_t col, uint32_t radius, bool entirePath) const {
-
-    const uint32_t neighborsCount = (radius + 2) * (radius + 3) * (2*(radius+2) + 1) / 6;
-
-    // approximation of how many cells will be stored in the vector
-    // TODO: redo the formula to match exactly the numbers of elements needed
-    std::vector<T> neighbors;
-    neighbors.reserve(neighborsCount);
-
-
-    if (entirePath)
-        return _getMooreNeighborhoodEntirePath(row, col, radius);
-    else
-        return _getMooreNeighborhood(row, col, radius);
-
-    return neighbors;
-}
-
-template<typename T>
-std::vector<T> CellularAutomaton<T>::path(uint32_t row, uint32_t col,
-    DirectionsList directions) const {
-
-    std::vector<T> pathCells;
-
-    auto maxRadius = std::max_element(std::begin(directions), std::end(directions), 
-        [] (const Direction& lhs, const Direction& rhs) {
-            return std::isless(lhs.second, rhs.second);
-    })->second;
-
-    pathCells.reserve((directions.size() * maxRadius) + 1);
-
-    auto currentRow = row;
-    auto currentCol = col;
-
-    pathCells.push_back(getCellValue(row, col));
-
-    for (auto direction: directions) {
-
-        auto dir = direction.first;
-        auto steps = direction.second; // how many steps in that direction
-        std::vector<T> cells = getNeighbors(currentRow, currentCol, dir, steps);
-
-        pathCells.insert(std::end(pathCells), std::begin(cells), std::end(cells));
-        auto newPosition = _getNeighboorPosition(currentRow, currentCol, dir, steps);
-        currentRow = newPosition.first;
-        currentCol = newPosition.second;
-
+            ret.push_back(nCell);
+        }
     }
 
-    return pathCells;
+    return ret;
 }
 
 template<typename T>
