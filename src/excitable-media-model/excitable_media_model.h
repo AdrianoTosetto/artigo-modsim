@@ -28,7 +28,7 @@ class ExcitableMediaModel: public CellularAutomaton<ExcitableMediaCell<>> {
                     } else {
                         cCol++;
                     }
-                    if (cRow < 3) {
+                    if (cRow < 4) {
                         everBeenGray.getCellRef(cRow, cCol) = 1;
                         return ExcitableMediaCell<>(1, cRow, cCol);
                     } else {
@@ -96,6 +96,9 @@ class ExcitableMediaModel: public CellularAutomaton<ExcitableMediaCell<>> {
             return currentCol == (cols - 1);
         };
 
+        auto fileHeader = stringFormat("%i,%i", _rows, _cols);
+        fout << fileHeader.c_str() << "\n";
+
         for (auto i = 0; i < _rows; i++) {
             for (auto j = 0; j < _cols; j++) {
 
@@ -111,6 +114,27 @@ class ExcitableMediaModel: public CellularAutomaton<ExcitableMediaCell<>> {
         }
         fout.close();
     }
+
+    void endSimulation() {
+        saveEverBeenActive("hasEverBeenActive");
+    }
+
+    void generateMetadataPerBreakpoint() {
+        auto sum = 0; // total cells that have been active until the breakpoint
+        for (auto i = 0; i < _rows; i++) {
+            for (auto j = 0; j < _cols; j++) {
+                if (getCellRef(i, j).hasEverBeenActive())
+                    sum++;
+            }
+        }
+        std::cout << "sum = " << sum << std::endl;
+        _everBeenGrayInBreakpoint.push_back(sum);
+    }
+
+    std::vector<uint32_t> getEverBeenGrayInBreakpoint() const {
+        return _everBeenGrayInBreakpoint;
+    }
+
     virtual void update() {
         iterate();
         // std::cout << "================================================" << std::endl;
@@ -127,6 +151,8 @@ class ExcitableMediaModel: public CellularAutomaton<ExcitableMediaCell<>> {
     // 1 = cell has been excited at least once during the simulation
     
     Grid<int> _everBeenGray;
+
+    std::vector<uint32_t> _everBeenGrayInBreakpoint;
 };
 
 #endif

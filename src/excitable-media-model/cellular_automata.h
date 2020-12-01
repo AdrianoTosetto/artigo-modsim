@@ -4,33 +4,10 @@
 #include <utility>
 #include <algorithm>
 #include <fstream>
+#include <filesystem>
 
-//#include "host_pathgen_cell.h"
+#include "utils.h"
 #include "excitable_media_cell.h"
-
-std::vector<std::pair<int, int>> genOffsets(int radius) {
-    std::vector<std::pair<int, int>> offsets;
-    for (auto r = -radius; r <= radius; r++)
-        offsets.push_back(std::make_pair(-radius, r));
-
-    for (auto r = -(radius-1); r <= (radius-1); r++)
-        offsets.push_back(std::make_pair(r, radius));
-
-    for (auto r = radius; r >= -radius; r--)
-        offsets.push_back(std::make_pair(radius, r));
-
-    for (auto r = (radius-1); r >= -(radius-1); r--)
-        offsets.push_back(std::make_pair(r, -radius));
-
-    return offsets;
-}
-
-int mod(int a, int b)
-{
-    int r = a % b;
-    return r < 0 ? r + b : r;
-}
-
 
 template<typename T>
 class Grid {
@@ -109,6 +86,8 @@ class CellularAutomaton {
     CellularAutomaton(int rows, int cols);
     void display();
     virtual void update();
+    virtual void endSimulation() = 0; // for data that need to be generated after simulation ends
+    virtual void generateMetadataPerBreakpoint() = 0;
     virtual void simulate(uint32_t);
     T getCellValue(uint32_t, uint32_t) const;
 
@@ -120,8 +99,20 @@ class CellularAutomaton {
  
     void saveToImage(const std::string& filename) const;
     void setBreakpoints(const std::initializer_list<uint32_t>&);
-    void setSnapshotsFolder(const std::string& folder);
     std::vector<T> moore(uint32_t row, uint32_t col, uint32_t radius) const;
+
+    void setSnapshotsFolder(const std::string& folder) {
+        if (!std::filesystem::is_directory(folder)) {
+            if (!std::filesystem::create_directory(folder)) {
+                throw "Error on creating snapshots folder";
+            }
+        }
+        _snapshotsFolder = folder;
+    }
+    void generateSimulationVideo(std::string filename) {
+        _generateSimulationVideo = true;
+        _simulationVideoFilename = std::move(filename);
+    }
 
  protected:
     std::vector<T> _grid;
@@ -130,6 +121,8 @@ class CellularAutomaton {
     int _cols;
     uint32_t _timestamp = 0;
     std::string _snapshotsFolder;
+    bool _generateSimulationVideo = false;
+    std::string _simulationVideoFilename = "";
  private:
     inline std::vector<T> _getMooreNeighborhoodEntirePath(uint32_t row,  
         uint32_t col, uint32_t radius) const;
@@ -152,7 +145,8 @@ void CellularAutomaton<T>::saveToImage(const std::string& filename) const {
     std::ofstream fout;
     std::string filenameExt = filename + ".txt";
     fout.open(filenameExt);
-
+    auto fileHeader = stringFormat("%i,%i", _rows, _cols);
+    fout << fileHeader.c_str() << "\n";
 
     for (auto i = 0; i < _rows; i++) {
         for (auto j = 0; j < _cols - 1; j++) {
@@ -306,24 +300,40 @@ std::vector<T> CellularAutomaton<T>::moore(uint32_t row,
 }
 
 template<typename T>
-void CellularAutomaton<T>::setSnapshotsFolder(const std::string& folder) {
-    _snapshotsFolder = folder;
-}
-
-template<typename T>
 void CellularAutomaton<T>::simulate(uint32_t steps) {
-
     for (auto i = 0; i < steps; i++) {
+        std::cout << i << std::endl;
+        if (_generateSimulationVideo) {
+            auto filename = _snapshotsFolder + genFileName(i);
+
+            saveToImage(filename);
+        }
         if (!_imageBreakpoints.empty()) {
             auto breakpoint = _imageBreakpoints.front();
             if (i == breakpoint) {
-                const std::string filename = _snapshotsFolder + "snapshot" + std::to_string(breakpoint);
+                auto filename = _snapshotsFolder + genFileName(breakpoint);
+
                 saveToImage(filename);
+                generateMetadataPerBreakpoint();
                 _imageBreakpoints.erase(_imageBreakpoints.begin());
             }
         }
         this->update();
     }
+    endSimulation();
+    auto createImagescommand = 
+        stringFormat("python3 make_images.py %s", _snapshotsFolder.c_str());
+
+    auto createVideoCommand = 
+        stringFormat(
+            "python3 make_video.py %s %s",
+            _snapshotsFolder.c_str(),
+            _simulationVideoFilename.c_str()
+        );
+
+    system(createImagescommand.c_str());
+    if (_generateSimulationVideo)
+        system(createVideoCommand.c_str());
     //this->display();
 }
 

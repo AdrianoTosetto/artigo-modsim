@@ -96,7 +96,7 @@ ExcitableMediaCell<E, R>::ExcitableMediaCell(uint32_t row, uint32_t col):
     _row(row), _col(col) {
     _xPerturbation = uniformDistribution(-0.5, 0.5);
     _yPerturbation = uniformDistribution(-0.5, 0.5);
-    _weight = uniformDistribution(0.5, 1.5);
+    _weight = uniformDistribution(0.50000001, 1.49999999999);
     _hasEverBeenActive = false;
 }
 
