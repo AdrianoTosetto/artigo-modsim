@@ -17,9 +17,11 @@ class GasCell {
     }
 
     std::string getColorString() const {
+        if (_isSolid)
+            return "000,000,000";
         if (_state)
-            return "";
-        return "000,000,000";
+            return "0,255,0";
+        return "255,255,255";
     }
 
 

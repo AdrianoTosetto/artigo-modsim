@@ -1,35 +1,18 @@
 #ifndef CELULLAR_AUTOMATON_H
 #define CELULLAR_AUTOMATON_H
+
 #include <vector>
 #include <utility>
 #include <algorithm>
 #include <fstream>
 #include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <assert.h>
 
 #include "gas_cell.h"
+#include "utils.h"
 
-std::vector<std::pair<int, int>> genOffsets(int radius) {
-    std::vector<std::pair<int, int>> offsets;
-    for (auto r = -radius; r <= radius; r++)
-        offsets.push_back(std::make_pair(-radius, r));
-
-    for (auto r = -(radius-1); r <= (radius-1); r++)
-        offsets.push_back(std::make_pair(r, radius));
-
-    for (auto r = radius; r >= -radius; r--)
-        offsets.push_back(std::make_pair(radius, r));
-
-    for (auto r = (radius-1); r >= -(radius-1); r--)
-        offsets.push_back(std::make_pair(r, -radius));
-
-    return offsets;
-}
-
-int mod(int a, int b)
-{
-    int r = a % b;
-    return r < 0 ? r + b : r;
-}
 
 template<typename T>
 class Grid {
@@ -115,6 +98,26 @@ enum BitDirection: uint8_t {
     bLEFT
 };
 
+template <typename T>
+class has_GetColorString
+{
+
+    template <typename C> 
+    static constexpr bool test(decltype(&C::getColorString) arg) {
+        std::cout << std::is_same<decltype(&C::getColorString), std::string>() << std::endl;
+
+        return std::is_same<decltype(std::string("aaa")), std::string>();
+    }
+
+    template <typename C> 
+    static constexpr bool test(...) {
+        return false;
+    }
+
+public:
+    static constexpr bool value = test<T>(0);
+};
+
 template<typename T>
 class CellularAutomaton {
 
@@ -125,9 +128,21 @@ class CellularAutomaton {
  public:
 
     CellularAutomaton(int rows, int cols);
+        
+    ~CellularAutomaton() {
+        /*
+        * checks whether or not if type T has method getColorString
+        * TODO: maybe check if getColorString is a marked as const (which makes sense,
+        * it should not change the T object in anyway)
+        * */
+        //static_assert(has_GetColorString<T>::value, "T must have getColorString method");
+    }
+
     void display();
     virtual void update();
     virtual void simulate(uint32_t);
+    virtual void generateMetaData() = 0;
+
     T getCellValue(uint32_t, uint32_t) const;
 
     T& getCellRef(uint32_t, uint32_t);
@@ -139,16 +154,34 @@ class CellularAutomaton {
  
     void saveToImage(const std::string& filename) const;
     void setBreakpoints(const std::initializer_list<uint32_t>&);
+    void setBreakpoints(const std::vector<uint32_t>& breakpoints);
+
     void setSnapshotsFolder(const std::string& folder) {
+        if (!std::filesystem::is_directory(folder)) {
+            if (!std::filesystem::create_directory(folder)) {
+                throw "Error on creating snapshots folder";
+            }
+        }
         _snapshotsFolder = folder;
     }
+
+    void generateSimulationVideo(std::string filename) {
+        _generateSimulationVideo = true;
+        _simulationVideoFilename = std::move(filename);
+    }
+
  protected:
     Grid<T> grid;
     int _rows;
     int _cols;
     uint32_t _timestamp = 0;
     std::string _snapshotsFolder;
+
  private:
+
+    bool _generateSimulationVideo = false;
+    std::string _simulationVideoFilename;
+
     inline std::vector<T> _getMooreNeighborhoodEntirePath(uint32_t row,  
         uint32_t col, uint32_t radius) const;
     inline std::vector<T> _getMooreNeighborhood(uint32_t row, uint32_t col, uint32_t radius) const;
@@ -160,7 +193,6 @@ class CellularAutomaton {
         uint32_t col, NDIRECTION dir, uint32_t radius) const;
 
     T _getNeighbor(uint32_t row, uint32_t col, NDIRECTION dir, uint32_t radius) const;
-
 
 
     // in which timestamps the class should generate a snapshot of the grid
@@ -175,6 +207,8 @@ void CellularAutomaton<T>::saveToImage(const std::string& filename) const {
     std::string filenameExt = filename + ".txt";
     fout.open(filenameExt);
 
+    auto fileHeader = stringFormat("%i,%i", _rows, _cols);
+    fout << fileHeader.c_str() << "\n";
 
     for (auto i = 0; i < _rows; i++) {
         for (auto j = 0; j < _cols - 1; j++) {
@@ -188,6 +222,11 @@ void CellularAutomaton<T>::saveToImage(const std::string& filename) const {
 
 template<typename T>
 void CellularAutomaton<T>::setBreakpoints(const std::initializer_list<uint32_t>& breakpoints) {
+    _imageBreakpoints = breakpoints;
+}
+
+template<typename T>
+void CellularAutomaton<T>::setBreakpoints(const std::vector<uint32_t>& breakpoints) {
     _imageBreakpoints = breakpoints;
 }
 
@@ -284,21 +323,38 @@ template<typename T>
 void CellularAutomaton<T>::simulate(uint32_t steps) {
 
     for (auto i = 0; i < steps; i++) {
+        std::cout << i << std::endl;
+        if (_generateSimulationVideo) {
+            auto filename = _snapshotsFolder + genFileName(i);
+
+            saveToImage(filename);
+        }
         if (!_imageBreakpoints.empty()) {
             auto breakpoint = _imageBreakpoints.front();
             if (i == breakpoint) {
-                const std::string filename = _snapshotsFolder + "snapshot" + std::to_string(breakpoint);
-                if (!std::filesystem::is_directory(_snapshotsFolder)) {
-                    if (!std::filesystem::create_directory(_snapshotsFolder)) {
-                        throw "Error on creating snapshots folder";
-                    }
-                }
+                auto filename = _snapshotsFolder + genFileName(breakpoint);
+
                 saveToImage(filename);
+                generateMetaData();
                 _imageBreakpoints.erase(_imageBreakpoints.begin());
             }
         }
+
         this->update();
     }
+    auto createImagescommand = 
+        stringFormat("python3 make_images.py %s", _snapshotsFolder.c_str());
+
+    auto createVideoCommand = 
+        stringFormat(
+            "python3 make_video.py %s %s",
+            _snapshotsFolder.c_str(),
+            _simulationVideoFilename.c_str()
+        );
+
+    system(createImagescommand.c_str());
+    if (_generateSimulationVideo)
+        system(createVideoCommand.c_str());
     //this->display();
 }
 
